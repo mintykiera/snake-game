@@ -3,18 +3,17 @@ use crate::resources::{GameState, Screen, UserProfile};
 use crate::constants::*;
 use crate::game_logic::save_user_data;
 use crate::database::Database;
-use bevy::prelude::Res;
 
 pub fn show_profile_screen(
     ui: &mut egui::Ui,
     state: &mut GameState,
     profile: &mut UserProfile,
-    db_res: &Res<Database>,
+    db: &mut Database,
 ) {
     ui.vertical_centered(|ui| {
         ui.horizontal(|ui| {
             if ui.button("Back").clicked() {
-                save_user_data(profile, db_res);
+                save_user_data(profile, db);
                 state.current_screen = Screen::MainMenu;
             }
         });
@@ -133,7 +132,7 @@ pub fn show_profile_screen(
             ui.add_space(spacing);
             
             if ui.add_sized([button_width, 42.0], egui::Button::new("Save Profile")).clicked() {
-                save_user_data(profile, db_res);
+                save_user_data(profile, db);
             }
         });
     });

@@ -44,7 +44,7 @@ pub fn ui_system(
     mut egui_init: ResMut<EguiInitialized>,
     qr_textures: Res<QRCodeTextures>,
     keyboard: Res<Input<KeyCode>>,
-    db_res: Res<Database>,
+    mut db_res: ResMut<Database>,
 ) {
     let ctx = contexts.ctx_mut();
     
@@ -60,7 +60,7 @@ pub fn ui_system(
     }
 
     if state.current_screen == Screen::Playing {
-        run_game_logic(&time, &mut game, &mut profile, &mut leaderboard, &db_res);
+        run_game_logic(&time, &mut game, &mut profile, &mut leaderboard, &mut db_res);
     }
 
     egui::CentralPanel::default()
@@ -71,7 +71,7 @@ pub fn ui_system(
                 Screen::Playing => show_game_screen(ui, &mut state, &mut game, &profile),
                 Screen::Settings => show_settings_screen(ui, &mut state),
                 Screen::Leaderboard => show_leaderboard_screen(ui, &mut state, &leaderboard),
-                Screen::Profile => show_profile_screen(ui, &mut state, &mut profile, &db_res),
+                Screen::Profile => show_profile_screen(ui, &mut state, &mut profile, &mut db_res),
                 Screen::Share => show_share_screen(ui, &mut state, &qr_textures),
             }
         });

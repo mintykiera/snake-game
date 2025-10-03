@@ -39,8 +39,10 @@ fn generate_qr_codes(
 ) {
     let ctx = contexts.ctx_mut();
 
-    let android_url = "https://github.com/mintykiera/snake-game/releases/download/v1.0/snake_game.apk";
-    let code = QrCode::new(android_url.as_bytes()).unwrap();
+
+    let release_url = "https://github.com/mintykiera/snake-game/releases/latest";
+
+    let code = QrCode::new(release_url.as_bytes()).unwrap();
     let width = code.width();
     let size = [width, width];
 
@@ -57,8 +59,7 @@ fn generate_qr_codes(
     let texture_handle = ctx.load_texture("android_qr", egui_image, Default::default());
     qr_textures.android_qr = Some(texture_handle.id());
 
-    let ios_url = "https://github.com/mintykiera/snake-game/releases/download/v1.0/snake_game.ipa";
-    let code = QrCode::new(ios_url.as_bytes()).unwrap();
+    let code = QrCode::new(release_url.as_bytes()).unwrap();
     let width = code.width();
     let size = [width, width];
     

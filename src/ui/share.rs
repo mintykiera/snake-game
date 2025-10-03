@@ -29,7 +29,7 @@ pub fn show_share_screen(ui: &mut egui::Ui, state: &mut GameState, qr_textures: 
         }
         
         ui.add_space(8.0);
-        ui.label(egui::RichText::new("https://github.com/mintykiera/snake-game/releases/tag/v1.0snake_game.apk").color(egui::Color32::GRAY));
+        ui.label(egui::RichText::new("github.com/mintykiera/snake-game/releases/latest").color(egui::Color32::GRAY));
         
         ui.add_space(25.0);
         
@@ -43,7 +43,7 @@ pub fn show_share_screen(ui: &mut egui::Ui, state: &mut GameState, qr_textures: 
         }
         
         ui.add_space(8.0);
-        ui.label(egui::RichText::new("https://github.com/mintykiera/snake-game/releases/tag/v1.0snake_game.apk").color(egui::Color32::GRAY));
+        ui.label(egui::RichText::new("github.com/mintykiera/snake-game/releases/latest").color(egui::Color32::GRAY));
         // we're gonna change this to ipa once we have that working...
         
         ui.add_space(20.0);
