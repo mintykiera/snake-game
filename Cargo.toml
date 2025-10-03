@@ -3,11 +3,19 @@ name = "snake_game"
 version = "0.1.0"
 edition = "2021"
 
+# Add this metadata for cargo-ndk
+[package.metadata.android]
+package = "com.yourname.snakegame"
+label = "Snake Game"
+# You can add an icon here later if you want
+# icon = "@mipmap/ic_launcher"
+
 [lib]
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# SIMPLIFY THE BIN SECTION
 [[bin]]
-name = "snake_game_app"
+name = "snake_game" # Use the same name as the package
 path = "src/main.rs"
 
 [dependencies]
@@ -21,6 +29,7 @@ bevy = { version = "0.12", default-features = false, features = [
     "x11",
     "wayland",
 ] }
+# IMPORTANT: Disable default features for bevy_egui to avoid clipboard error on Android
 bevy_egui = { version = "0.23", default-features = false }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
