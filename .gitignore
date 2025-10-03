@@ -1,0 +1,11 @@
+/target/
+
+/snake_game_data.db/
+
+/build/
+
+.vscode/
+
+Cargo.lock
+
+.DS_Store
