@@ -5,34 +5,19 @@ mod profile;
 mod settings;
 mod share;
 
-use game_screen::*;
-use leaderboard::*;
-use main_menu::*;
-use profile::*;
-use settings::*;
-use share::*;
+use game_screen::show_game_screen;
+use leaderboard::show_leaderboard_screen;
+use main_menu::show_main_menu;
+use profile::show_profile_screen;
+use settings::show_settings_screen;
+use share::show_share_screen;
 
 use bevy::prelude::*;
 use bevy::input::Input;
 use bevy_egui::{egui, EguiContexts};
 use crate::resources::*;
-use crate::constants::*;
 use crate::game_logic::*;
 use crate::database::Database;
-use qrcode::QrCode;
-use qrcode::render::unicode;
-
-fn generate_qr_code(url: &str) -> Option<String> {
-    if let Ok(code) = QrCode::new(url.as_bytes()) {
-        let string = code
-            .render::<unicode::Dense1x2>()
-            .dark_color(unicode::Dense1x2::Dark)
-            .light_color(unicode::Dense1x2::Light)
-            .build();
-        return Some(string);
-    }
-    None
-}
 
 fn apply_modern_style(ctx: &egui::Context) {
     let mut style = (*ctx.style()).clone();
@@ -57,7 +42,7 @@ pub fn ui_system(
     mut leaderboard: ResMut<Leaderboard>,
     time: Res<Time>,
     mut egui_init: ResMut<EguiInitialized>,
-    mut qr_textures: ResMut<QRCodeTextures>,
+    qr_textures: Res<QRCodeTextures>,
     keyboard: Res<Input<KeyCode>>,
     db_res: Res<Database>,
 ) {
@@ -66,11 +51,6 @@ pub fn ui_system(
     if !egui_init.initialized {
         ctx.set_pixels_per_point(1.5);
         egui_init.initialized = true;
-    }
-
-    if state.current_screen == Screen::Share && qr_textures.android_qr.is_none() {
-        qr_textures.android_qr = generate_qr_code(ANDROID_DOWNLOAD_URL);
-        qr_textures.ios_qr = generate_qr_code(IOS_DOWNLOAD_URL);
     }
 
     apply_modern_style(ctx);

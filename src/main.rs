@@ -1,3 +1,3 @@
 fn main() {
-    snake_game::run();
+    snake_game::main();
 }

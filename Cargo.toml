@@ -3,23 +3,16 @@ name = "snake_game"
 version = "0.1.0"
 edition = "2021"
 
-# Add this metadata for cargo-ndk
-[package.metadata.android]
-package = "com.yourname.snakegame"
-label = "Snake Game"
-# You can add an icon here later if you want
-# icon = "@mipmap/ic_launcher"
-
 [lib]
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["cdylib", "rlib"]
 
-# SIMPLIFY THE BIN SECTION
 [[bin]]
-name = "snake_game" # Use the same name as the package
+name = "snake_game"
 path = "src/main.rs"
 
 [dependencies]
 bevy = { version = "0.12", default-features = false, features = [
+    "bevy_asset",
     "bevy_winit",
     "bevy_render",
     "bevy_core_pipeline",
@@ -29,7 +22,6 @@ bevy = { version = "0.12", default-features = false, features = [
     "x11",
     "wayland",
 ] }
-# IMPORTANT: Disable default features for bevy_egui to avoid clipboard error on Android
 bevy_egui = { version = "0.23", default-features = false }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
@@ -38,14 +30,22 @@ qrcode = "0.14"
 image = "0.24"
 sled = "0.34"
 
+[package.metadata.android]
+package = "com.mintykiera.snakegame"
+label = "Snake Game"
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
+assets = "assets"
+
+[package.metadata.android.sdk]
+target_sdk_version = 34
+min_sdk_version = 21
+
 [profile.release]
 opt-level = 'z'
 lto = true
 codegen-units = 1
 panic = 'abort'
-
-[target.'cfg(target_os = "android")'.dependencies]
-ndk-glue = "0.7"
+strip = true
 
 [target.'cfg(target_os = "ios")'.dependencies]
 objc = "0.2"

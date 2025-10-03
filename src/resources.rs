@@ -1,6 +1,7 @@
 use bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
 use crate::constants::*;
+use bevy_egui::egui; 
 
 #[derive(Resource, Default, PartialEq, Clone)]
 pub enum Screen {
@@ -93,8 +94,8 @@ pub struct EguiInitialized {
 
 #[derive(Resource, Default)]
 pub struct QRCodeTextures {
-    pub android_qr: Option<String>,
-    pub ios_qr: Option<String>,
+    pub android_qr: Option<egui::TextureId>,
+    pub ios_qr: Option<egui::TextureId>,
 }
 
 pub fn generate_random_id() -> String {

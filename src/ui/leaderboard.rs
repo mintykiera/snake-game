@@ -11,12 +11,12 @@ pub fn show_leaderboard_screen(ui: &mut egui::Ui, state: &mut GameState, leaderb
         
         ui.add_space(30.0);
         
-        ui.heading(egui::RichText::new("Leaderboard").size(32.0));
+        ui.heading("Leaderboard");
         
         ui.add_space(40.0);
         
         if leaderboard.entries.is_empty() {
-            ui.label(egui::RichText::new("No scores yet").size(18.0).color(egui::Color32::GRAY));
+            ui.label(egui::RichText::new("No scores yet").color(egui::Color32::GRAY));
             ui.add_space(15.0);
             ui.label("Play to set your first record!");
         } else {
@@ -29,10 +29,10 @@ pub fn show_leaderboard_screen(ui: &mut egui::Ui, state: &mut GameState, leaderb
                             2 => "🥉",
                             _ => "  ",
                         };
-                        ui.label(egui::RichText::new(format!("{} #{}", medal, i + 1)).size(16.0));
-                        ui.label(egui::RichText::new(&entry.username).size(16.0));
+                        ui.label(format!("{} #{}", medal, i + 1));
+                        ui.label(&entry.username);
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.label(egui::RichText::new(format!("{}", entry.score)).size(16.0).color(egui::Color32::from_rgb(0, 255, 100)));
+                            ui.label(egui::RichText::new(format!("{}", entry.score)).color(egui::Color32::from_rgb(0, 255, 100)));
                         });
                     });
                     ui.add_space(12.0);

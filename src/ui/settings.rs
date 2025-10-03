@@ -11,7 +11,7 @@ pub fn show_settings_screen(ui: &mut egui::Ui, state: &mut GameState) {
         
         ui.add_space(60.0);
         
-        ui.heading(egui::RichText::new("Settings").size(32.0));
+        ui.heading("Settings");
         
         ui.add_space(100.0);
         

@@ -33,13 +33,13 @@ fn show_game_screen_portrait(
             }
             
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(egui::RichText::new(format!("Best: {}", profile.high_score)).size(13.0).color(egui::Color32::GRAY));
+                ui.label(egui::RichText::new(format!("Best: {}", profile.high_score)).color(egui::Color32::GRAY));
             });
         });
         
         ui.add_space(8.0);
         
-        ui.heading(egui::RichText::new(format!("Score: {}", game.score)).size(22.0).color(egui::Color32::WHITE));
+        ui.heading(egui::RichText::new(format!("Score: {}", game.score)).color(egui::Color32::WHITE));
         
         ui.add_space(15.0);
         
@@ -50,9 +50,7 @@ fn show_game_screen_portrait(
         if game.game_over {
             ui.colored_label(egui::Color32::from_rgb(255, 100, 100), egui::RichText::new("Game Over").size(24.0));
             ui.add_space(15.0);
-            if ui.add_sized([180.0, 50.0], egui::Button::new(
-                egui::RichText::new("Play Again").size(18.0)
-            )).clicked() {
+            if ui.add_sized([180.0, 50.0], egui::Button::new("Play Again")).clicked() {
                 *game = Game::default();
             }
         } else {
@@ -68,9 +66,7 @@ fn show_game_screen_portrait(
             
             ui.add_space(20.0);
             
-            if ui.add_sized([100.0, 38.0], egui::Button::new(
-                egui::RichText::new(if game.paused { "Resume" } else { "Pause" }).size(15.0)
-            )).clicked() {
+            if ui.add_sized([100.0, 38.0], egui::Button::new(if game.paused { "Resume" } else { "Pause" })).clicked() {
                 game.paused = !game.paused;
             }
         }
@@ -93,7 +89,7 @@ fn show_game_screen_landscape(
             });
             
             ui.add_space(8.0);
-            ui.heading(egui::RichText::new(format!("Score: {}", game.score)).size(20.0));
+            ui.heading(format!("Score: {}", game.score));
             ui.label(format!("Best: {}", profile.high_score));
             ui.add_space(15.0);
             
