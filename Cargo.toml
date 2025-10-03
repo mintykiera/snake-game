@@ -6,10 +6,6 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[[bin]]
-name = "snake_game_binary"
-path = "src/main.rs"
-
 [dependencies]
 bevy = { version = "0.12", default-features = false, features = [
     "bevy_asset",
@@ -41,7 +37,7 @@ min_sdk_version = 24
 
 [profile.release]
 opt-level = 'z'
-lto = true
+lto = "thin"
 codegen-units = 1
 panic = 'abort'
 strip = true
@@ -51,3 +47,9 @@ objc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["winuser"] }
+
+[package.metadata.android.signing.release]
+path = "snake_game.keystore"
+keystore_password = "ENV"
+key_alias = "snake_game_alias"
+key_password = "ENV"

@@ -1,11 +1,16 @@
 /target/
 
+snake_game.keystore
+*.keystore
+
 /snake_game_data.db/
 
 /build/
 
 .vscode/
-
-Cargo.lock
+.idea/
+*.sublime-project
+*.sublime-workspace
 
 .DS_Store
+Thumbs.db
