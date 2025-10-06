@@ -13,7 +13,7 @@ use settings::show_settings_screen;
 use share::show_share_screen;
 
 use bevy::prelude::*;
-use bevy::input::Input;
+use bevy::input::ButtonInput;
 use bevy_egui::{egui, EguiContexts};
 use crate::resources::*;
 use crate::game_logic::*;
@@ -43,7 +43,7 @@ pub fn ui_system(
     time: Res<Time>,
     mut egui_init: ResMut<EguiInitialized>,
     qr_textures: Res<QRCodeTextures>,
-    keyboard: Res<Input<KeyCode>>,
+    keyboard: Res<ButtonInput<KeyCode>>,
     mut db_res: ResMut<Database>,
 ) {
     let ctx = contexts.ctx_mut();

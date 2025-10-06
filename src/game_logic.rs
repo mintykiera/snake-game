@@ -1,5 +1,5 @@
 use bevy::prelude::{KeyCode, Res, ResMut, Time};
-use bevy::input::Input;
+use bevy::input::ButtonInput;
 use rand::Rng;
 
 use crate::resources::*;
@@ -55,14 +55,14 @@ pub fn load_leaderboard(
     save_leaderboard(&leaderboard, &mut *db_res);
 }
 
-pub fn handle_keyboard_input(keyboard: &Res<Input<KeyCode>>, game: &mut Game) {
-    if keyboard.just_pressed(KeyCode::Up) || keyboard.just_pressed(KeyCode::W) {
+pub fn handle_keyboard_input(keyboard: &Res<ButtonInput<KeyCode>>, game: &mut Game) {
+    if keyboard.just_pressed(KeyCode::ArrowUp) || keyboard.just_pressed(KeyCode::KeyW) {
         if game.direction != Direction::Down { game.direction = Direction::Up; }
-    } else if keyboard.just_pressed(KeyCode::Down) || keyboard.just_pressed(KeyCode::S) {
+    } else if keyboard.just_pressed(KeyCode::ArrowDown) || keyboard.just_pressed(KeyCode::KeyS) {
         if game.direction != Direction::Up { game.direction = Direction::Down; }
-    } else if keyboard.just_pressed(KeyCode::Left) || keyboard.just_pressed(KeyCode::A) {
+    } else if keyboard.just_pressed(KeyCode::ArrowLeft) || keyboard.just_pressed(KeyCode::KeyA) {
         if game.direction != Direction::Right { game.direction = Direction::Left; }
-    } else if keyboard.just_pressed(KeyCode::Right) || keyboard.just_pressed(KeyCode::D) {
+    } else if keyboard.just_pressed(KeyCode::ArrowRight) || keyboard.just_pressed(KeyCode::KeyD) {
         if game.direction != Direction::Left { game.direction = Direction::Right; }
     } else if keyboard.just_pressed(KeyCode::Space) {
         game.paused = !game.paused;

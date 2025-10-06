@@ -1,0 +1,17 @@
+[target.aarch64-linux-android]
+ar = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
+linker = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android33-clang.cmd"
+
+[target.armv7-linux-androideabi]
+ar = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
+linker = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/armv7a-linux-androideabi33-clang.cmd"
+
+[env]
+CC_aarch64-linux-android = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android33-clang.cmd"
+CXX_aarch64-linux-android = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android33-clang++.cmd"
+AR_aarch64-linux-android = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
+CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android33-clang.cmd"
+
+CC_armv7-linux-androideabi = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/armv7a-linux-androideabi33-clang.cmd"
+CXX_armv7-linux-androideabi = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/armv7a-linux-androideabi33-clang++.cmd"
+AR_armv7-linux-androideabi = "C:/Android/android-ndk-r25c/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"

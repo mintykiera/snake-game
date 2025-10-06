@@ -7,16 +7,8 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-bevy = { version = "0.12", default-features = false, features = [
-    "bevy_asset",
-    "bevy_winit",
-    "bevy_render",
-    "bevy_core_pipeline",
-    "bevy_sprite",
-    "bevy_text",
-    "bevy_ui",
-] }
-bevy_egui = { version = "0.23", default-features = false }
+bevy = "0.14"
+bevy_egui = { version = "0.28", default-features = false }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -25,6 +17,9 @@ image = "0.24"
 directories = "5.0"
 rusqlite = { version = "0.30", features = ["bundled"] }
 
+[target.'cfg(target_os = "android")'.dependencies]
+android-activity = { version = "0.6", features = ["native-activity"] }
+
 [package.metadata.android]
 package = "com.mintykiera.snakegame"
 label = "Snake Game"
@@ -32,7 +27,7 @@ build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
 assets = "assets"
 
 [package.metadata.android.sdk]
-target_sdk_version = 34
+target_sdk_version = 33
 min_sdk_version = 24
 
 [profile.release]
@@ -47,9 +42,3 @@ objc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["winuser"] }
-
-[package.metadata.android.signing.release]
-path = "snake_game.keystore"
-keystore_password = "ENV"
-key_alias = "snake_game_alias"
-key_password = "ENV"
