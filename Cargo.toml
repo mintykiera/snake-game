@@ -63,10 +63,6 @@ strip = true
 [build-dependencies]
 dotenvy = "0.15"
 
-[package.metadata.android.sdk]
-target_sdk_version = 33
-min_sdk_version = 24
-
 [profile.release]
 opt-level = 'z'
 lto = "thin"
