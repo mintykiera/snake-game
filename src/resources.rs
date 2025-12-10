@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use crate::constants::*;
 use eframe::egui;
 
-#[derive(Default, PartialEq, Clone)]
+#[derive(Default, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Screen {
     #[default]
     MainMenu,
@@ -21,7 +21,7 @@ pub enum Direction {
     Right,
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct GameState {
     pub current_screen: Screen,
 }

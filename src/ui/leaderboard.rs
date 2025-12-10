@@ -4,7 +4,9 @@ use crate::resources::{GameState, Screen, Leaderboard};
 const TOP_SAFE_AREA: f32 = 24.0;
 const BOTTOM_SAFE_AREA: f32 = 24.0;
 
-pub fn show_leaderboard_screen(ui: &mut egui::Ui, state: &mut GameState, leaderboard: &Leaderboard) {
+pub fn show_leaderboard_screen(ui: &mut egui::Ui, state: &mut GameState, leaderboard: &Leaderboard) -> bool {
+    let mut request_refresh = false;
+
     ui.add_space(TOP_SAFE_AREA);
     
     ui.vertical_centered(|ui| {
@@ -14,6 +16,14 @@ pub fn show_leaderboard_screen(ui: &mut egui::Ui, state: &mut GameState, leaderb
             )).clicked() {
                 state.current_screen = Screen::MainMenu;
             }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.add_sized([80.0, 35.0], egui::Button::new(
+                    egui::RichText::new("Refresh").size(12.5)
+                )).clicked() {
+                    request_refresh = true;
+                }
+            });
         });
         
         ui.add_space(20.0);
@@ -26,6 +36,10 @@ pub fn show_leaderboard_screen(ui: &mut egui::Ui, state: &mut GameState, leaderb
             ui.label(egui::RichText::new("No scores yet").size(18.0).color(egui::Color32::GRAY));
             ui.add_space(15.0);
             ui.label(egui::RichText::new("Play to set your first record!").size(16.0));
+            ui.add_space(10.0);
+            if ui.button("Force Refresh").clicked() {
+                request_refresh = true;
+            }
         } else {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 for (i, entry) in leaderboard.entries.iter().take(10).enumerate() {
@@ -59,4 +73,6 @@ pub fn show_leaderboard_screen(ui: &mut egui::Ui, state: &mut GameState, leaderb
         
         ui.add_space(BOTTOM_SAFE_AREA);
     });
+
+    request_refresh
 }

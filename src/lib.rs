@@ -7,8 +7,8 @@ use std::sync::mpsc::{Receiver, Sender};
 use eframe::egui;
 use resources::*;
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 
-// --- Async Communication Enums ---
 pub enum AsyncMessage {
     ProfileLoaded(UserProfile),
     LeaderboardLoaded(Leaderboard),
@@ -22,7 +22,11 @@ pub enum AsyncCommand {
     UpdateProfile(UserProfile),
 }
 
-// --- App Structure ---
+#[derive(Serialize, Deserialize)]
+struct SaveState {
+    profile: UserProfile,
+}
+
 pub struct SnakeApp {
     game: Game,
     state: GameState,
@@ -37,24 +41,28 @@ impl SnakeApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         setup_custom_fonts(&cc.egui_ctx);
 
-        // Setup communication channels
         let (tx_to_ui, rx_from_async) = std::sync::mpsc::channel();
         let (tx_to_async, rx_from_ui) = std::sync::mpsc::channel();
 
-        // Spawn the async runtime thread
         std::thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(async_loop(rx_from_ui, tx_to_ui));
         });
 
-        // Initial data fetch
-        let _ = tx_to_async.send(AsyncCommand::LoadProfile);
+        let profile = if let Some(storage) = cc.storage {
+            eframe::get_value::<SaveState>(storage, eframe::APP_KEY)
+                .map(|s| s.profile)
+                .unwrap_or_default()
+        } else {
+            UserProfile::default()
+        };
+
         let _ = tx_to_async.send(AsyncCommand::LoadLeaderboard);
 
         Self {
             game: Game::default(),
             state: GameState::default(),
-            profile: UserProfile::default(),
+            profile,
             leaderboard: Leaderboard::default(),
             qr_textures: QRCodeTextures::default(),
             rx: rx_from_async,
@@ -64,6 +72,13 @@ impl SnakeApp {
 }
 
 impl eframe::App for SnakeApp {
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        let save_data = SaveState {
+            profile: self.profile.clone(),
+        };
+        eframe::set_value(storage, eframe::APP_KEY, &save_data);
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             match self.state.current_screen {
@@ -76,6 +91,14 @@ impl eframe::App for SnakeApp {
                 }
                 _ => {
                     self.state.current_screen = Screen::MainMenu;
+                }
+                Screen::Leaderboard => {
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        let should_refresh = ui::leaderboard::show_leaderboard_screen(ui, &mut self.state, &self.leaderboard);
+                        if should_refresh {
+                            let _ = self.tx.send(AsyncCommand::LoadLeaderboard);
+                        }
+                    });
                 }
             }
         }
@@ -97,11 +120,11 @@ impl eframe::App for SnakeApp {
 
             if should_submit {
                  let _ = self.tx.send(AsyncCommand::SubmitScore(self.game.score, self.profile.clone()));
+                 ctx.request_repaint(); 
             }
             ctx.request_repaint(); 
         }
 
-        // 3. UI Rendering
         match self.state.current_screen {
             Screen::Playing => {
                 egui::CentralPanel::default().show(ctx, |ui| {
@@ -127,8 +150,8 @@ impl eframe::App for SnakeApp {
                  egui::CentralPanel::default().show(ctx, |ui| {
                     let should_sync = ui::profile::show_profile_screen(ui, &mut self.state, &mut self.profile);
                     if should_sync {
-                        println!("DEBUG: Syncing name change to cloud...");
                         let _ = self.tx.send(AsyncCommand::UpdateProfile(self.profile.clone()));
+                        ctx.request_repaint();
                     }
                 });
             }
@@ -141,10 +164,8 @@ impl eframe::App for SnakeApp {
     }
 }
 
-// --- Background Async Loop ---
 async fn async_loop(rx: Receiver<AsyncCommand>, tx: Sender<AsyncMessage>) {
     let base_url = option_env!("FIREBASE_URL").unwrap_or("ENV_NOT_FOUND");
-    println!("DEBUG: Using Firebase URL: {}", base_url);
 
     let client = reqwest::Client::new();
 
@@ -197,7 +218,6 @@ fn setup_custom_fonts(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 }
 
-// --- Android Entry Point ---
 #[cfg(target_os = "android")]
 use android_activity::AndroidApp;
 
