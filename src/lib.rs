@@ -92,14 +92,6 @@ impl eframe::App for SnakeApp {
                 _ => {
                     self.state.current_screen = Screen::MainMenu;
                 }
-                Screen::Leaderboard => {
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        let should_refresh = ui::leaderboard::show_leaderboard_screen(ui, &mut self.state, &self.leaderboard);
-                        if should_refresh {
-                            let _ = self.tx.send(AsyncCommand::LoadLeaderboard);
-                        }
-                    });
-                }
             }
         }
 
@@ -138,7 +130,11 @@ impl eframe::App for SnakeApp {
             }
             Screen::Leaderboard => {
                  egui::CentralPanel::default().show(ctx, |ui| {
-                    ui::leaderboard::show_leaderboard_screen(ui, &mut self.state, &self.leaderboard);
+                    let should_refresh = ui::leaderboard::show_leaderboard_screen(ui, &mut self.state, &self.leaderboard);
+                    
+                    if should_refresh {
+                        let _ = self.tx.send(AsyncCommand::LoadLeaderboard);
+                    }
                 });
             }
             Screen::Settings => {
