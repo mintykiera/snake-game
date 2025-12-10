@@ -1,6 +1,9 @@
-use bevy_egui::egui;
+use eframe::egui;
 use crate::resources::{Game, GameState, Screen, UserProfile, Direction};
 use crate::constants::{GRID_SIZE, CELL_SIZE};
+
+const TOP_SAFE_AREA: f32 = 24.0;
+const BOTTOM_SAFE_AREA: f32 = 24.0;
 
 pub fn show_game_screen(
     ui: &mut egui::Ui,
@@ -25,35 +28,59 @@ fn show_game_screen_portrait(
     game: &mut Game,
     profile: &UserProfile,
 ) {
+    ui.add_space(TOP_SAFE_AREA);
+    
     ui.vertical_centered(|ui| {
         ui.horizontal(|ui| {
-            if ui.button("Back").clicked() {
+            if ui.add_sized([70.0, 35.0], egui::Button::new(
+                egui::RichText::new("Back").size(12.5)
+            )).clicked() {
                 state.current_screen = Screen::MainMenu;
                 *game = Game::default();
             }
             
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(egui::RichText::new(format!("Best: {}", profile.high_score)).color(egui::Color32::GRAY));
+                ui.label(egui::RichText::new(format!("Best: {}", profile.high_score))
+                    .size(16.0)
+                    .color(egui::Color32::GRAY));
             });
         });
         
-        ui.add_space(8.0);
+        ui.add_space(12.0);
         
-        ui.heading(egui::RichText::new(format!("Score: {}", game.score)).color(egui::Color32::WHITE));
+        ui.heading(egui::RichText::new(format!("Score: {}", game.score))
+            .size(28.0)
+            .color(egui::Color32::WHITE));
         
         ui.add_space(15.0);
         
         draw_game_canvas(ui, game, profile);
         
-        ui.add_space(25.0);
-        
         if game.game_over {
-            ui.colored_label(egui::Color32::from_rgb(255, 100, 100), egui::RichText::new("Game Over").size(24.0));
-            ui.add_space(15.0);
-            if ui.add_sized([180.0, 50.0], egui::Button::new("Play Again")).clicked() {
+            ui.add_space(30.0);
+            ui.colored_label(
+                egui::Color32::from_rgb(255, 100, 100),
+                egui::RichText::new("Game Over").size(28.0)
+            );
+            ui.add_space(20.0);
+            if ui.add_sized([200.0, 55.0], egui::Button::new(
+                egui::RichText::new("Play Again").size(18.0)
+            )).clicked() {
                 *game = Game::default();
             }
         } else {
+            // Calculate space to push dpad toward bottom
+            let dpad_total_height = 70.0 * 3.0 + 8.0 * 2.0 + 20.0 + 45.0 + BOTTOM_SAFE_AREA;
+            let remaining = ui.available_height() - dpad_total_height;
+            
+            // Push dpad down, but leave some space at the very bottom
+            if remaining > 0.0 {
+                ui.add_space(remaining * 0.7);
+            } else {
+                ui.add_space(20.0);
+            }
+            
+            // Center the dpad
             ui.horizontal(|ui| {
                 let dpad_width = 70.0 * 3.0 + 8.0 * 2.0;
                 let available_width = ui.available_width();
@@ -64,11 +91,16 @@ fn show_game_screen_portrait(
                 draw_dpad_controls(ui, game);
             });
             
-            ui.add_space(20.0);
+            ui.add_space(15.0);
             
-            if ui.add_sized([100.0, 38.0], egui::Button::new(if game.paused { "Resume" } else { "Pause" })).clicked() {
+            if ui.add_sized([120.0, 45.0], egui::Button::new(
+                egui::RichText::new(if game.paused { "Resume" } else { "Pause" }).size(16.0)
+            )).clicked() {
                 game.paused = !game.paused;
             }
+            
+            // Bottom safe area
+            ui.add_space(BOTTOM_SAFE_AREA);
         }
     });
 }
@@ -79,32 +111,45 @@ fn show_game_screen_landscape(
     game: &mut Game,
     profile: &UserProfile,
 ) {
+    // Side safe areas for landscape
+    ui.add_space(TOP_SAFE_AREA);
+    
     ui.horizontal(|ui| {
+        ui.add_space(24.0); // Left safe area
+        
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                if ui.button("Back").clicked() {
+                // Bigger back button
+                if ui.add_sized([100.0, 50.0], egui::Button::new(
+                    egui::RichText::new("← Back").size(18.0)
+                )).clicked() {
                     state.current_screen = Screen::MainMenu;
                     *game = Game::default();
                 }
             });
             
             ui.add_space(8.0);
-            ui.heading(format!("Score: {}", game.score));
-            ui.label(format!("Best: {}", profile.high_score));
+            ui.heading(egui::RichText::new(format!("Score: {}", game.score)).size(24.0));
+            ui.label(egui::RichText::new(format!("Best: {}", profile.high_score)).size(14.0));
             ui.add_space(15.0);
             
             draw_game_canvas(ui, game, profile);
         });
         
-        ui.add_space(30.0);
+        ui.add_space(40.0);
         
         ui.vertical_centered(|ui| {
-            ui.add_space(80.0);
+            ui.add_space(60.0);
             
             if game.game_over {
-                ui.colored_label(egui::Color32::from_rgb(255, 100, 100), "Game Over");
-                ui.add_space(15.0);
-                if ui.button("Play Again").clicked() {
+                ui.colored_label(
+                    egui::Color32::from_rgb(255, 100, 100),
+                    egui::RichText::new("Game Over").size(24.0)
+                );
+                ui.add_space(20.0);
+                if ui.add_sized([160.0, 50.0], egui::Button::new(
+                    egui::RichText::new("Play Again").size(16.0)
+                )).clicked() {
                     *game = Game::default();
                 }
             } else {
@@ -112,11 +157,15 @@ fn show_game_screen_landscape(
                 
                 ui.add_space(25.0);
                 
-                if ui.button(if game.paused { "Resume" } else { "Pause" }).clicked() {
+                if ui.add_sized([120.0, 45.0], egui::Button::new(
+                    egui::RichText::new(if game.paused { "Resume" } else { "Pause" }).size(16.0)
+                )).clicked() {
                     game.paused = !game.paused;
                 }
             }
         });
+        
+        ui.add_space(24.0); // Right safe area
     });
 }
 

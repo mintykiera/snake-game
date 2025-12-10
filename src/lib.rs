@@ -1,178 +1,221 @@
 pub mod constants;
-pub mod database;
 pub mod game_logic;
 pub mod resources;
 pub mod ui;
 
-use bevy::gizmos::GizmoPlugin;
-use bevy::pbr::PbrPlugin;
-use bevy::prelude::*;
-use bevy::prelude::GilrsPlugin;
-use bevy::render::settings::{Backends, RenderCreation, WgpuSettings};
-use bevy::render::RenderPlugin;
-use bevy::window::PresentMode;
-use bevy::winit::WinitSettings;
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
-use android_activity::AndroidApp;
-use qrcode::{Color as QrColor, QrCode};
-
-use database::Database;
-use game_logic::{load_leaderboard, load_user_data};
+use std::sync::mpsc::{Receiver, Sender};
+use eframe::egui;
 use resources::*;
-use ui::ui_system;
+use std::collections::HashMap;
 
-#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct DatabaseSetupSet;
-
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
-enum AppReadyState {
-    #[default]
-    Initializing,
-    Ready,
+// --- Async Communication Enums ---
+pub enum AsyncMessage {
+    ProfileLoaded(UserProfile),
+    LeaderboardLoaded(Leaderboard),
+    ScoreSubmitted,
 }
 
-fn check_app_ready(
-    time: Res<Time>,
-    mut next_state: ResMut<NextState<AppReadyState>>,
-) {
-    if time.elapsed_seconds() > 0.5 {
-        info!("App initialized, setting state to Ready.");
-        next_state.set(AppReadyState::Ready);
-    }
+pub enum AsyncCommand {
+    LoadProfile,
+    LoadLeaderboard,
+    SubmitScore(u32, UserProfile),
+    UpdateProfile(UserProfile),
 }
 
-fn configure_egui_fonts(mut contexts: EguiContexts) {
-    let mut fonts = egui::FontDefinitions::default();
-    let font_data =
-        egui::FontData::from_static(include_bytes!("../assets/fonts/Poppins-Regular.ttf"));
-    fonts.font_data.insert("poppins".to_owned(), font_data);
-    fonts
-        .families
-        .entry(egui::FontFamily::Proportional)
-        .or_default()
-        .insert(0, "poppins".to_owned());
-    fonts
-        .families
-        .entry(egui::FontFamily::Monospace)
-        .or_default()
-        .insert(0, "poppins".to_owned());
-    contexts.ctx_mut().set_fonts(fonts);
+// --- App Structure ---
+pub struct SnakeApp {
+    game: Game,
+    state: GameState,
+    profile: UserProfile,
+    leaderboard: Leaderboard,
+    qr_textures: QRCodeTextures,
+    rx: Receiver<AsyncMessage>,
+    tx: Sender<AsyncCommand>,
 }
 
-fn generate_qr_codes(mut qr_textures: ResMut<QRCodeTextures>, mut contexts: EguiContexts) {
-    let ctx = contexts.ctx_mut();
-    let release_url = "https://github.com/mintykiera/snake-game/releases/latest";
+impl SnakeApp {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        setup_custom_fonts(&cc.egui_ctx);
 
-    let code = QrCode::new(release_url.as_bytes()).unwrap();
-    let egui_image = egui::ColorImage {
-        size: [code.width(), code.width()],
-        pixels: code
-            .to_colors()
-            .into_iter()
-            .map(|c| if c == QrColor::Dark { egui::Color32::BLACK } else { egui::Color32::WHITE })
-            .collect(),
-    };
-    let texture_handle = ctx.load_texture("android_qr", egui_image, Default::default());
-    qr_textures.android_qr = Some(texture_handle.id());
-    qr_textures.ios_qr = Some(texture_handle.id());
-}
+        // Setup communication channels
+        let (tx_to_ui, rx_from_async) = std::sync::mpsc::channel();
+        let (tx_to_async, rx_from_ui) = std::sync::mpsc::channel();
 
-// FIXED: handle Option and provide a safe fallback
-fn setup_database(mut commands: Commands, app: NonSend<AndroidApp>) {
-    let data_dir: std::path::PathBuf = app
-        .internal_data_path()
-        .or_else(|| app.external_data_path())
-        .unwrap_or_else(|| std::path::PathBuf::from("./snake_game_data"));
-
-    if let Err(e) = std::fs::create_dir_all(&data_dir) {
-        error!("Failed to create data directory: {}", e);
-    }
-
-    let db = Database::new(data_dir.to_string_lossy().to_string());
-    commands.insert_resource(db);
-}
-
-fn spawn_demo(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-    commands.spawn(SpriteBundle {
-        sprite: Sprite {
-            color: Color::srgb(0.2, 0.8, 0.3),
-            custom_size: Some(Vec2::new(300.0, 300.0)),
-            ..default()
-        },
-        ..default()
-    });
-}
-
-fn egui_debug_overlay(mut ctxs: EguiContexts) {
-    egui::Area::new("dbg_overlay".into())
-        .fixed_pos(egui::pos2(10.0, 10.0))
-        .show(ctxs.ctx_mut(), |ui| {
-            ui.label("Hello from Bevy on Android (GL) 👋");
+        // Spawn the async runtime thread
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async_loop(rx_from_ui, tx_to_ui));
         });
+
+        // Initial data fetch
+        let _ = tx_to_async.send(AsyncCommand::LoadProfile);
+        let _ = tx_to_async.send(AsyncCommand::LoadLeaderboard);
+
+        Self {
+            game: Game::default(),
+            state: GameState::default(),
+            profile: UserProfile::default(),
+            leaderboard: Leaderboard::default(),
+            qr_textures: QRCodeTextures::default(),
+            rx: rx_from_async,
+            tx: tx_to_async,
+        }
+    }
 }
 
-#[bevy_main]
-fn main() {
-    std::env::set_var("WGPU_BACKEND", "gl");
+impl eframe::App for SnakeApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            match self.state.current_screen {
+                Screen::MainMenu => {
+                    std::process::exit(0);
+                }
+                Screen::Playing => {
+                    self.state.current_screen = Screen::MainMenu;
+                    self.game = Game::default();
+                }
+                _ => {
+                    self.state.current_screen = Screen::MainMenu;
+                }
+            }
+        }
 
-    App::new()
-        .add_plugins(
-            DefaultPlugins
-                .build()
-                .disable::<PbrPlugin>()
-                .disable::<GilrsPlugin>()
-                .disable::<GizmoPlugin>()
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "Snake Game".to_string(),
-                        resolution: (400., 800.).into(),
-                        resizable: false,
-                        present_mode: PresentMode::Fifo,
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(RenderPlugin {
-                    render_creation: RenderCreation::Automatic(WgpuSettings {
-                        backends: Some(Backends::GL),
-                        ..default()
-                    }),
-                    ..default()
-                }),
-        )
-        .insert_resource(ClearColor(Color::srgb(0.1, 0.1, 0.15)))
-        .insert_resource(WinitSettings::game())
-        .add_plugins(EguiPlugin)
-        .init_resource::<GameState>()
-        .init_resource::<Game>()
-        .init_resource::<UserProfile>()
-        .init_resource::<Leaderboard>()
-        .init_resource::<EguiInitialized>()
-        .init_resource::<QRCodeTextures>()
-        .init_state::<AppReadyState>()
-        .add_systems(
-            Update,
-            check_app_ready.run_if(in_state(AppReadyState::Initializing)),
-        )
-        .add_systems(
-            Startup,
-            (
-                setup_database.in_set(DatabaseSetupSet),
-                (load_user_data, load_leaderboard).after(DatabaseSetupSet),
-            ),
-        )
-        .add_systems(
-            OnEnter(AppReadyState::Ready),
-            (
-                spawn_demo,
-                configure_egui_fonts,
-                generate_qr_codes,
-            ),
-        )
-        .add_systems(
-            Update,
-            (egui_debug_overlay, ui_system).run_if(in_state(AppReadyState::Ready)),
-        )
-        .run();
+        while let Ok(msg) = self.rx.try_recv() {
+            match msg {
+                AsyncMessage::ProfileLoaded(p) => self.profile = p,
+                AsyncMessage::LeaderboardLoaded(l) => self.leaderboard = l,
+                AsyncMessage::ScoreSubmitted => {
+                    let _ = self.tx.send(AsyncCommand::LoadLeaderboard);
+                }
+            }
+        }
+
+        if self.state.current_screen == Screen::Playing {
+            game_logic::handle_input(ctx, &mut self.game);
+            let dt = ctx.input(|i| i.stable_dt);
+            let should_submit = game_logic::update_game(dt, &mut self.game, &mut self.profile);
+
+            if should_submit {
+                 let _ = self.tx.send(AsyncCommand::SubmitScore(self.game.score, self.profile.clone()));
+            }
+            ctx.request_repaint(); 
+        }
+
+        // 3. UI Rendering
+        match self.state.current_screen {
+            Screen::Playing => {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                      ui::game_screen::show_game_screen(ui, &mut self.state, &mut self.game, &self.profile);
+                });
+            }
+            Screen::MainMenu => {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    ui::main_menu::show_main_menu(ui, &mut self.state, &self.profile);
+                });
+            }
+            Screen::Leaderboard => {
+                 egui::CentralPanel::default().show(ctx, |ui| {
+                    ui::leaderboard::show_leaderboard_screen(ui, &mut self.state, &self.leaderboard);
+                });
+            }
+            Screen::Settings => {
+                 egui::CentralPanel::default().show(ctx, |ui| {
+                    ui::settings::show_settings_screen(ui, &mut self.state);
+                });
+            }
+            Screen::Profile => {
+                 egui::CentralPanel::default().show(ctx, |ui| {
+                    let should_sync = ui::profile::show_profile_screen(ui, &mut self.state, &mut self.profile);
+                    if should_sync {
+                        println!("DEBUG: Syncing name change to cloud...");
+                        let _ = self.tx.send(AsyncCommand::UpdateProfile(self.profile.clone()));
+                    }
+                });
+            }
+             Screen::Share => {
+                 egui::CentralPanel::default().show(ctx, |ui| {
+                    ui::share::show_share_screen(ui, &mut self.state, &mut self.qr_textures, ctx);
+                });
+            }
+        }
+    }
+}
+
+// --- Background Async Loop ---
+async fn async_loop(rx: Receiver<AsyncCommand>, tx: Sender<AsyncMessage>) {
+    let base_url = option_env!("FIREBASE_URL").unwrap_or("ENV_NOT_FOUND");
+    println!("DEBUG: Using Firebase URL: {}", base_url);
+
+    let client = reqwest::Client::new();
+
+    while let Ok(cmd) = rx.recv() {
+        match cmd {
+            AsyncCommand::LoadProfile => { }
+            AsyncCommand::LoadLeaderboard => {
+                let url = format!("{}leaderboard.json", base_url);
+                
+                if let Ok(resp) = client.get(&url).send().await {
+                    if let Ok(text) = resp.text().await {
+                        if text == "null" {
+                            let _ = tx.send(AsyncMessage::LeaderboardLoaded(Leaderboard { entries: vec![] }));
+                        } else if let Ok(map) = serde_json::from_str::<HashMap<String, LeaderboardEntry>>(&text) {
+                            let mut entries: Vec<LeaderboardEntry> = map.into_values().collect();
+                            entries.sort_by(|a, b| b.score.cmp(&a.score));
+                            entries.truncate(10);
+                            let _ = tx.send(AsyncMessage::LeaderboardLoaded(Leaderboard { entries }));
+                        }
+                    }
+                }
+            }
+            AsyncCommand::UpdateProfile(profile) => {
+                 let url = format!("{}leaderboard/{}.json", base_url, profile.user_id);
+                 let entry = LeaderboardEntry {
+                    user_id: profile.user_id.clone(),
+                    username: profile.username.clone(),
+                    score: profile.high_score,
+                 };
+
+                 let _ = client.patch(&url).json(&entry).send().await;
+                 let _ = tx.send(AsyncMessage::ScoreSubmitted);
+            }
+            AsyncCommand::SubmitScore(score, profile) => {
+                 let url = format!("{}leaderboard/{}.json", base_url, profile.user_id);
+                 let entry = LeaderboardEntry {
+                    user_id: profile.user_id.clone(),
+                    username: profile.username.clone(),
+                    score,
+                 };
+                 let _ = client.patch(&url).json(&entry).send().await;
+                 let _ = tx.send(AsyncMessage::ScoreSubmitted);
+            }
+        }
+    }
+}
+
+fn setup_custom_fonts(ctx: &egui::Context) {
+    let fonts = egui::FontDefinitions::default();
+    ctx.set_fonts(fonts);
+}
+
+// --- Android Entry Point ---
+#[cfg(target_os = "android")]
+use android_activity::AndroidApp;
+
+#[cfg(target_os = "android")]
+#[no_mangle]
+fn android_main(app: AndroidApp) {
+    use eframe::NativeOptions;
+    use winit::platform::android::EventLoopBuilderExtAndroid;
+
+    let mut options = NativeOptions::default();
+
+    options.event_loop_builder = Some(Box::new(move |builder| {
+        builder.with_android_app(app);
+    }));
+
+    eframe::run_native(
+        "Snake Game",
+        options,
+        Box::new(|cc| Ok(Box::new(SnakeApp::new(cc)))),
+    ).unwrap();
 }

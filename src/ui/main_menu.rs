@@ -1,7 +1,7 @@
-use bevy_egui::egui;
-use crate::resources::{GameState, Screen};
+use eframe::egui;
+use crate::resources::{GameState, Screen, UserProfile};
 
-pub fn show_main_menu(ui: &mut egui::Ui, state: &mut GameState) {
+pub fn show_main_menu(ui: &mut egui::Ui, state: &mut GameState, _profile: &UserProfile) {
     ui.vertical_centered(|ui| {
         ui.add_space(60.0);
         

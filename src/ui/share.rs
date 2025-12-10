@@ -1,53 +1,88 @@
-use bevy_egui::egui;
+use eframe::egui;
+use qrcode::{QrCode, Color as QrColor};
 use crate::resources::{GameState, Screen, QRCodeTextures};
+use crate::constants::{ANDROID_DOWNLOAD_URL, IOS_DOWNLOAD_URL};
 
-pub fn show_share_screen(ui: &mut egui::Ui, state: &mut GameState, qr_textures: &QRCodeTextures) {
+const TOP_SAFE_AREA: f32 = 24.0;
+const BOTTOM_SAFE_AREA: f32 = 24.0;
+
+pub fn generate_qr_textures(ctx: &egui::Context) -> QRCodeTextures {
+    let mut textures = QRCodeTextures::default();
+
+    let code_android = QrCode::new(ANDROID_DOWNLOAD_URL.as_bytes()).unwrap();
+    let image_android = egui::ColorImage {
+        size: [code_android.width(), code_android.width()],
+        pixels: code_android
+            .to_colors()
+            .into_iter()
+            .map(|c| if c == QrColor::Dark { egui::Color32::BLACK } else { egui::Color32::WHITE })
+            .collect(),
+    };
+    textures.android_qr = Some(ctx.load_texture("android_qr", image_android, Default::default()).id());
+
+    let code_ios = QrCode::new(IOS_DOWNLOAD_URL.as_bytes()).unwrap();
+    let image_ios = egui::ColorImage {
+        size: [code_ios.width(), code_ios.width()],
+        pixels: code_ios
+            .to_colors()
+            .into_iter()
+            .map(|c| if c == QrColor::Dark { egui::Color32::BLACK } else { egui::Color32::WHITE })
+            .collect(),
+    };
+    textures.ios_qr = Some(ctx.load_texture("ios_qr", image_ios, Default::default()).id());
+
+    textures
+}
+
+pub fn show_share_screen(ui: &mut egui::Ui, state: &mut GameState, qr_textures: &mut QRCodeTextures, ctx: &egui::Context) {
+    if qr_textures.android_qr.is_none() {
+        *qr_textures = generate_qr_textures(ctx);
+    }
+
+    ui.add_space(TOP_SAFE_AREA);
+    
     ui.vertical_centered(|ui| {
         ui.horizontal(|ui| {
-            if ui.button("Back").clicked() {
+            if ui.add_sized([70.0, 35.0], egui::Button::new(
+                egui::RichText::new("Back").size(12.5)
+            )).clicked() {
                 state.current_screen = Screen::MainMenu;
             }
         });
         
+        ui.add_space(15.0);
+        ui.heading(egui::RichText::new("Share Game").size(28.0));
+        ui.add_space(10.0);
+        ui.label(egui::RichText::new("Scan to Download").size(14.0).color(egui::Color32::GRAY));
         ui.add_space(20.0);
         
-        ui.heading("Share Game");
-        
-        ui.add_space(15.0);
-        
-        ui.label(egui::RichText::new("Scan to Download").color(egui::Color32::GRAY));
-        
-        ui.add_space(25.0);
-        
-        ui.label(egui::RichText::new("Android").strong());
+        ui.label(egui::RichText::new("Android").size(18.0).strong());
         ui.add_space(8.0);
         
         if let Some(texture_id) = qr_textures.android_qr {
-            ui.image((texture_id, egui::vec2(128.0, 128.0)));
-        } else {
-            ui.label("Generating QR code...");
+            ui.add(egui::Image::new(egui::load::SizedTexture::new(texture_id, [150.0, 150.0])));
         }
         
         ui.add_space(8.0);
-        ui.label(egui::RichText::new("github.com/mintykiera/snake-game/releases/latest").color(egui::Color32::GRAY));
-        
-        ui.add_space(25.0);
-        
-        ui.label(egui::RichText::new("iOS ( no ios yet btw :'c )").strong());
-        ui.add_space(8.0);
-        
-        if let Some(texture_id) = qr_textures.ios_qr {
-            ui.image((texture_id, egui::vec2(128.0, 128.0)));
-        } else {
-            ui.label("Generating QR code...");
-        }
-        
-        ui.add_space(8.0);
-        ui.label(egui::RichText::new("github.com/mintykiera/snake-game/releases/latest").color(egui::Color32::GRAY));
-        // we're gonna change this to ipa once we have that working...
+        ui.hyperlink(ANDROID_DOWNLOAD_URL);
         
         ui.add_space(20.0);
         
-        ui.label(egui::RichText::new("Share with friends!").color(egui::Color32::from_rgb(0, 200, 255)));
+        ui.label(egui::RichText::new("iOS (Coming Soon)").size(18.0).strong());
+        ui.add_space(8.0);
+        
+        if let Some(texture_id) = qr_textures.ios_qr {
+            ui.add(egui::Image::new(egui::load::SizedTexture::new(texture_id, [150.0, 150.0])));
+        }
+        
+        ui.add_space(8.0);
+        ui.hyperlink(IOS_DOWNLOAD_URL);
+        
+        ui.add_space(15.0);
+        ui.label(egui::RichText::new("Share with friends!")
+            .size(16.0)
+            .color(egui::Color32::from_rgb(0, 200, 255)));
+        
+        ui.add_space(BOTTOM_SAFE_AREA);
     });
 }

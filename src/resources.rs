@@ -1,9 +1,8 @@
-use bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
 use crate::constants::*;
-use bevy_egui::egui; 
+use eframe::egui;
 
-#[derive(Resource, Default, PartialEq, Clone)]
+#[derive(Default, PartialEq, Clone)]
 pub enum Screen {
     #[default]
     MainMenu,
@@ -22,12 +21,11 @@ pub enum Direction {
     Right,
 }
 
-#[derive(Resource, Default)]
+#[derive(Default)]
 pub struct GameState {
     pub current_screen: Screen,
 }
 
-#[derive(Resource)]
 pub struct Game {
     pub snake: Vec<(i32, i32)>,
     pub direction: Direction,
@@ -52,7 +50,7 @@ impl Default for Game {
     }
 }
 
-#[derive(Resource, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UserProfile {
     pub user_id: String,
     pub username: String,
@@ -64,9 +62,12 @@ pub struct UserProfile {
 
 impl Default for UserProfile {
     fn default() -> Self {
+        use rand::Rng;
+        let random_suffix: u16 = rand::thread_rng().gen_range(1000..9999);
+        
         Self {
             user_id: generate_random_id(),
-            username: String::new(),
+            username: format!("Player {}", random_suffix),
             snake_color: DEFAULT_SNAKE_COLOR,
             background_color: DEFAULT_BACKGROUND_COLOR,
             apple_color: DEFAULT_APPLE_COLOR,
@@ -75,7 +76,7 @@ impl Default for UserProfile {
     }
 }
 
-#[derive(Resource, Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct Leaderboard {
     pub entries: Vec<LeaderboardEntry>,
 }
@@ -87,12 +88,7 @@ pub struct LeaderboardEntry {
     pub score: u32,
 }
 
-#[derive(Resource, Default)]
-pub struct EguiInitialized {
-    pub initialized: bool,
-}
-
-#[derive(Resource, Default)]
+#[derive(Default)]
 pub struct QRCodeTextures {
     pub android_qr: Option<egui::TextureId>,
     pub ios_qr: Option<egui::TextureId>,
