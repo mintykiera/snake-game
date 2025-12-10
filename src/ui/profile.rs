@@ -33,7 +33,16 @@ pub fn show_profile_screen(
                 ui.label(egui::RichText::new("Username").size(14.0).color(egui::Color32::GRAY));
                 ui.add_space(5.0);
                 
-                let response = ui.add_sized([280.0, 35.0], egui::TextEdit::singleline(&mut profile.username));
+                let response = ui.add_sized(
+                    [280.0, 35.0], 
+                    egui::TextEdit::singleline(&mut profile.username)
+                        .hint_text("Tap to set name")
+                );
+
+                if response.clicked() {
+                    response.request_focus();
+                }
+
                 if response.lost_focus() {
                     request_sync = true;
                 }
