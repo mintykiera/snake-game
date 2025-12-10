@@ -56,33 +56,51 @@ pub fn show_share_screen(ui: &mut egui::Ui, state: &mut GameState, qr_textures: 
         ui.label(egui::RichText::new("Scan to Download").size(14.0).color(egui::Color32::GRAY));
         ui.add_space(20.0);
         
-        ui.label(egui::RichText::new("Android").size(18.0).strong());
-        ui.add_space(8.0);
-        
-        if let Some(texture_id) = qr_textures.android_qr {
-            ui.add(egui::Image::new(egui::load::SizedTexture::new(texture_id, [150.0, 150.0])));
-        }
-        
-        ui.add_space(8.0);
-        ui.hyperlink(ANDROID_DOWNLOAD_URL);
+        ui.group(|ui| {
+            ui.set_min_width(220.0);
+            ui.vertical_centered(|ui| {
+                ui.label(egui::RichText::new("Android").size(18.0).strong());
+                ui.add_space(10.0);
+                
+                if let Some(texture_id) = qr_textures.android_qr {
+                    ui.add(egui::Image::new(egui::load::SizedTexture::new(texture_id, [160.0, 160.0])));
+                }
+                
+                ui.add_space(12.0);
+                
+                ui.hyperlink_to(
+                    egui::RichText::new("Download APK").size(16.0).color(egui::Color32::from_rgb(100, 200, 255)),
+                    ANDROID_DOWNLOAD_URL
+                );
+            });
+        });
         
         ui.add_space(20.0);
         
-        ui.label(egui::RichText::new("iOS (Coming Soon)").size(18.0).strong());
-        ui.add_space(8.0);
+        ui.group(|ui| {
+            ui.set_min_width(220.0);
+            ui.vertical_centered(|ui| {
+                ui.label(egui::RichText::new("iOS").size(18.0).strong());
+                ui.add_space(10.0);
+                
+                if let Some(texture_id) = qr_textures.ios_qr {
+                    ui.add(egui::Image::new(egui::load::SizedTexture::new(texture_id, [160.0, 160.0])));
+                }
+                
+                ui.add_space(12.0);
+                
+                ui.hyperlink_to(
+                    egui::RichText::new("Download IPA").size(16.0).color(egui::Color32::from_rgb(100, 200, 255)),
+                    IOS_DOWNLOAD_URL
+                );
+            });
+        });
         
-        if let Some(texture_id) = qr_textures.ios_qr {
-            ui.add(egui::Image::new(egui::load::SizedTexture::new(texture_id, [150.0, 150.0])));
-        }
-        
-        ui.add_space(8.0);
-        ui.hyperlink(IOS_DOWNLOAD_URL);
-        
-        ui.add_space(15.0);
+        ui.add_space(25.0);
         ui.label(egui::RichText::new("Share with friends!")
             .size(16.0)
             .color(egui::Color32::from_rgb(0, 200, 255)));
-        
+            
         ui.add_space(BOTTOM_SAFE_AREA);
     });
 }
