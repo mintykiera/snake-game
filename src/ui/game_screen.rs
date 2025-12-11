@@ -1,4 +1,5 @@
 use eframe::egui;
+
 use crate::resources::{Game, GameState, Screen, UserProfile, Direction};
 use crate::constants::{GRID_SIZE, CELL_SIZE};
 
@@ -69,20 +70,17 @@ fn show_game_screen_portrait(
                 *game = Game::default();
             }
         } else {
-            // Calculate space to push dpad toward bottom
-            let dpad_total_height = 70.0 * 3.0 + 8.0 * 2.0 + 20.0 + 45.0 + BOTTOM_SAFE_AREA;
+            let dpad_total_height = 76.0 * 3.0 + 8.0 * 2.0 + 20.0 + 45.0 + BOTTOM_SAFE_AREA;
             let remaining = ui.available_height() - dpad_total_height;
             
-            // Push dpad down, but leave some space at the very bottom
             if remaining > 0.0 {
                 ui.add_space(remaining * 0.7);
             } else {
                 ui.add_space(20.0);
             }
             
-            // Center the dpad
             ui.horizontal(|ui| {
-                let dpad_width = 70.0 * 3.0 + 8.0 * 2.0;
+                let dpad_width = 76.0 * 3.0 + 8.0 * 2.0;
                 let available_width = ui.available_width();
                 let padding = (available_width - dpad_width) / 2.0;
                 
@@ -99,7 +97,6 @@ fn show_game_screen_portrait(
                 game.paused = !game.paused;
             }
             
-            // Bottom safe area
             ui.add_space(BOTTOM_SAFE_AREA);
         }
     });
@@ -111,15 +108,13 @@ fn show_game_screen_landscape(
     game: &mut Game,
     profile: &UserProfile,
 ) {
-    // Side safe areas for landscape
     ui.add_space(TOP_SAFE_AREA);
     
     ui.horizontal(|ui| {
-        ui.add_space(24.0); // Left safe area
+        ui.add_space(24.0);
         
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                // Bigger back button
                 if ui.add_sized([100.0, 50.0], egui::Button::new(
                     egui::RichText::new("← Back").size(18.0)
                 )).clicked() {
@@ -165,7 +160,7 @@ fn show_game_screen_landscape(
             }
         });
         
-        ui.add_space(24.0); // Right safe area
+        ui.add_space(24.0);
     });
 }
 
@@ -179,7 +174,7 @@ fn draw_game_canvas(ui: &mut egui::Ui, game: &Game, profile: &UserProfile) {
     
     painter.rect_filled(
         rect,
-        4.0,
+        0.0,
         egui::Color32::from_rgb(
             profile.background_color[0],
             profile.background_color[1],
@@ -187,10 +182,11 @@ fn draw_game_canvas(ui: &mut egui::Ui, game: &Game, profile: &UserProfile) {
         ),
     );
     
+    // Brighter outline for better visibility
     painter.rect_stroke(
         rect,
-        4.0,
-        egui::Stroke::new(2.0, egui::Color32::from_gray(60)),
+        0.0,
+        egui::Stroke::new(2.5, egui::Color32::from_gray(110)),
     );
 
     for i in 0..GRID_SIZE {
@@ -243,7 +239,7 @@ fn draw_game_canvas(ui: &mut egui::Ui, game: &Game, profile: &UserProfile) {
 }
 
 fn draw_dpad_controls(ui: &mut egui::Ui, game: &mut Game) {
-    let button_size = egui::vec2(70.0, 70.0);
+    let button_size = egui::vec2(76.0, 76.0);
     let spacing = egui::vec2(8.0, 8.0);
     let arrow_color = egui::Color32::from_gray(190);
 

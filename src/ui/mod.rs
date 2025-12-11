@@ -1,9 +1,10 @@
 pub mod game_screen;
-pub mod leaderboard;
 pub mod main_menu;
-pub mod profile;
+pub mod leaderboard;
 pub mod settings;
+pub mod profile;
 pub mod share;
+pub mod components;
 
 use eframe::egui;
 

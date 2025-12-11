@@ -9,6 +9,12 @@ use resources::*;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
+#[cfg(target_os = "android")]
+use std::sync::OnceLock;
+
+#[cfg(target_os = "android")]
+static ANDROID_DATA_PATH: OnceLock<std::path::PathBuf> = OnceLock::new();
+
 pub enum AsyncMessage {
     ProfileLoaded(UserProfile),
     LeaderboardLoaded(Leaderboard),
@@ -35,6 +41,9 @@ pub struct SnakeApp {
     qr_textures: QRCodeTextures,
     rx: Receiver<AsyncMessage>,
     tx: Sender<AsyncCommand>,
+    last_save_time: f64,
+    #[cfg(target_os = "android")]
+    show_keyboard: bool,
 }
 
 impl SnakeApp {
@@ -49,13 +58,19 @@ impl SnakeApp {
             rt.block_on(async_loop(rx_from_ui, tx_to_ui));
         });
 
-        let profile = if let Some(storage) = cc.storage {
-            eframe::get_value::<SaveState>(storage, eframe::APP_KEY)
-                .map(|s| s.profile)
-                .unwrap_or_default()
-        } else {
-            UserProfile::default()
-        };
+        let mut profile = UserProfile::default();
+
+        if let Some(path) = get_save_path() {
+            if let Ok(contents) = std::fs::read_to_string(&path) {
+                if let Ok(saved_state) = serde_json::from_str::<SaveState>(&contents) {
+                    profile = saved_state.profile;
+                }
+            }
+        } else if let Some(storage) = cc.storage {
+            if let Some(saved_state) = eframe::get_value::<SaveState>(storage, eframe::APP_KEY) {
+                profile = saved_state.profile;
+            }
+        }
 
         let _ = tx_to_async.send(AsyncCommand::LoadLeaderboard);
 
@@ -67,6 +82,9 @@ impl SnakeApp {
             qr_textures: QRCodeTextures::default(),
             rx: rx_from_async,
             tx: tx_to_async,
+            last_save_time: 0.0,
+            #[cfg(target_os = "android")]
+            show_keyboard: false,
         }
     }
 }
@@ -79,7 +97,15 @@ impl eframe::App for SnakeApp {
         eframe::set_value(storage, eframe::APP_KEY, &save_data);
     }
 
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        let now = ctx.input(|i| i.time);
+        
+        let mut force_save = false;
+
+        if now - self.last_save_time > 5.0 {
+            force_save = true;
+        }
+
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             match self.state.current_screen {
                 Screen::MainMenu => {
@@ -111,10 +137,11 @@ impl eframe::App for SnakeApp {
             let should_submit = game_logic::update_game(dt, &mut self.game, &mut self.profile);
 
             if should_submit {
-                 let _ = self.tx.send(AsyncCommand::SubmitScore(self.game.score, self.profile.clone()));
-                 ctx.request_repaint(); 
+                let _ = self.tx.send(AsyncCommand::SubmitScore(self.game.score, self.profile.clone()));
+                ctx.request_repaint();
+                force_save = true;
             }
-            ctx.request_repaint(); 
+            ctx.request_repaint();
         }
 
         match self.state.current_screen {
@@ -129,7 +156,7 @@ impl eframe::App for SnakeApp {
                 });
             }
             Screen::Leaderboard => {
-                 egui::CentralPanel::default().show(ctx, |ui| {
+                egui::CentralPanel::default().show(ctx, |ui| {
                     let should_refresh = ui::leaderboard::show_leaderboard_screen(ui, &mut self.state, &self.leaderboard);
                     
                     if should_refresh {
@@ -138,23 +165,58 @@ impl eframe::App for SnakeApp {
                 });
             }
             Screen::Settings => {
-                 egui::CentralPanel::default().show(ctx, |ui| {
+                egui::CentralPanel::default().show(ctx, |ui| {
                     ui::settings::show_settings_screen(ui, &mut self.state);
                 });
             }
             Screen::Profile => {
-                 egui::CentralPanel::default().show(ctx, |ui| {
-                    let should_sync = ui::profile::show_profile_screen(ui, &mut self.state, &mut self.profile);
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    #[cfg(target_os = "android")]
+                    let should_sync = ui::profile::show_profile_screen(
+                        ui,
+                        &mut self.state,
+                        &mut self.profile,
+                        &mut self.show_keyboard,
+                    );
+
+                    #[cfg(not(target_os = "android"))]
+                    let should_sync = ui::profile::show_profile_screen(
+                        ui,
+                        &mut self.state,
+                        &mut self.profile,
+                    );
+
                     if should_sync {
                         let _ = self.tx.send(AsyncCommand::UpdateProfile(self.profile.clone()));
                         ctx.request_repaint();
+                        force_save = true;
                     }
                 });
             }
-             Screen::Share => {
-                 egui::CentralPanel::default().show(ctx, |ui| {
+            Screen::Share => {
+                egui::CentralPanel::default().show(ctx, |ui| {
                     ui::share::show_share_screen(ui, &mut self.state, &mut self.qr_textures, ctx);
                 });
+            }
+        }
+
+        if force_save {
+            self.last_save_time = now;
+
+            if let Some(storage) = frame.storage_mut() {
+                let save_data = SaveState {
+                    profile: self.profile.clone(),
+                };
+                eframe::set_value(storage, eframe::APP_KEY, &save_data);
+            }
+
+            if let Some(path) = get_save_path() {
+                let save_data = SaveState {
+                    profile: self.profile.clone(),
+                };
+                if let Ok(json) = serde_json::to_string(&save_data) {
+                    let _ = std::fs::write(path, json);
+                }
             }
         }
     }
@@ -167,10 +229,10 @@ async fn async_loop(rx: Receiver<AsyncCommand>, tx: Sender<AsyncMessage>) {
 
     while let Ok(cmd) = rx.recv() {
         match cmd {
-            AsyncCommand::LoadProfile => { }
+            AsyncCommand::LoadProfile => {}
             AsyncCommand::LoadLeaderboard => {
                 let url = format!("{}leaderboard.json", base_url);
-                
+
                 if let Ok(resp) = client.get(&url).send().await {
                     if let Ok(text) = resp.text().await {
                         if text == "null" {
@@ -185,25 +247,25 @@ async fn async_loop(rx: Receiver<AsyncCommand>, tx: Sender<AsyncMessage>) {
                 }
             }
             AsyncCommand::UpdateProfile(profile) => {
-                 let url = format!("{}leaderboard/{}.json", base_url, profile.user_id);
-                 let entry = LeaderboardEntry {
+                let url = format!("{}leaderboard/{}.json", base_url, profile.user_id);
+                let entry = LeaderboardEntry {
                     user_id: profile.user_id.clone(),
                     username: profile.username.clone(),
                     score: profile.high_score,
-                 };
+                };
 
-                 let _ = client.patch(&url).json(&entry).send().await;
-                 let _ = tx.send(AsyncMessage::ScoreSubmitted);
+                let _ = client.patch(&url).json(&entry).send().await;
+                let _ = tx.send(AsyncMessage::ScoreSubmitted);
             }
             AsyncCommand::SubmitScore(score, profile) => {
-                 let url = format!("{}leaderboard/{}.json", base_url, profile.user_id);
-                 let entry = LeaderboardEntry {
+                let url = format!("{}leaderboard/{}.json", base_url, profile.user_id);
+                let entry = LeaderboardEntry {
                     user_id: profile.user_id.clone(),
                     username: profile.username.clone(),
                     score,
-                 };
-                 let _ = client.patch(&url).json(&entry).send().await;
-                 let _ = tx.send(AsyncMessage::ScoreSubmitted);
+                };
+                let _ = client.patch(&url).json(&entry).send().await;
+                let _ = tx.send(AsyncMessage::ScoreSubmitted);
             }
         }
     }
@@ -223,7 +285,12 @@ fn android_main(app: AndroidApp) {
     use eframe::NativeOptions;
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
+    if let Some(path) = app.internal_data_path() {
+        let _ = ANDROID_DATA_PATH.set(path.to_path_buf());
+    }
+
     let mut options = NativeOptions::default();
+    options.run_and_return = false;
 
     options.event_loop_builder = Some(Box::new(move |builder| {
         builder.with_android_app(app);
@@ -233,5 +300,25 @@ fn android_main(app: AndroidApp) {
         "Snake Game",
         options,
         Box::new(|cc| Ok(Box::new(SnakeApp::new(cc)))),
-    ).unwrap();
+    )
+    .unwrap();
+}
+
+fn get_save_path() -> Option<std::path::PathBuf> {
+    #[cfg(target_os = "android")]
+    {
+        return ANDROID_DATA_PATH.get().map(|p| p.join("save_data.json"));
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        if let Some(dirs) = directories::ProjectDirs::from("com", "mintykiera", "snakegame") {
+            let data_dir = dirs.data_dir();
+            if !data_dir.exists() {
+                let _ = std::fs::create_dir_all(data_dir);
+            }
+            return Some(data_dir.join("save_data.json"));
+        }
+        None
+    }
 }

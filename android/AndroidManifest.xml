@@ -16,10 +16,10 @@
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
         android:hasCode="false">
 
-        <activity
+    <activity
             android:name="android.app.NativeActivity"
             android:label="Snake Game"
-            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|smallestScreenSize|uiMode|keyboard"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|smallestScreenSize|uiMode|keyboard|navigation"
             android:windowSoftInputMode="adjustResize"> 
             
             <meta-data
