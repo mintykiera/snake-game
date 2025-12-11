@@ -120,7 +120,7 @@ impl eframe::App for SnakeApp {
         match self.state.current_screen {
             Screen::Playing => {
                 egui::CentralPanel::default().show(ctx, |ui| {
-                      ui::game_screen::show_game_screen(ui, &mut self.state, &mut self.game, &self.profile);
+                    ui::game_screen::show_game_screen(ui, &mut self.state, &mut self.game, &self.profile);
                 });
             }
             Screen::MainMenu => {

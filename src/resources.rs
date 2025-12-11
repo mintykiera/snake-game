@@ -90,8 +90,8 @@ pub struct LeaderboardEntry {
 
 #[derive(Default)]
 pub struct QRCodeTextures {
-    pub android_qr: Option<egui::TextureId>,
-    pub ios_qr: Option<egui::TextureId>,
+    pub android_qr: Option<egui::TextureHandle>,
+    pub ios_qr: Option<egui::TextureHandle>,
 }
 
 pub fn generate_random_id() -> String {

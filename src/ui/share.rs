@@ -9,27 +9,20 @@ const BOTTOM_SAFE_AREA: f32 = 24.0;
 pub fn generate_qr_textures(ctx: &egui::Context) -> QRCodeTextures {
     let mut textures = QRCodeTextures::default();
 
-    let code_android = QrCode::new(ANDROID_DOWNLOAD_URL.as_bytes()).unwrap();
-    let image_android = egui::ColorImage {
-        size: [code_android.width(), code_android.width()],
-        pixels: code_android
-            .to_colors()
-            .into_iter()
-            .map(|c| if c == QrColor::Dark { egui::Color32::BLACK } else { egui::Color32::WHITE })
-            .collect(),
+    let create_qr = |url: &str, name: &str| -> egui::TextureHandle {
+        let code = QrCode::new(url.as_bytes()).unwrap();
+        let image = egui::ColorImage {
+            size: [code.width(), code.width()],
+            pixels: code.to_colors()
+                .into_iter()
+                .map(|c| if c == QrColor::Dark { egui::Color32::BLACK } else { egui::Color32::WHITE })
+                .collect(),
+        };
+        ctx.load_texture(name, image, egui::TextureOptions::NEAREST)
     };
-    textures.android_qr = Some(ctx.load_texture("android_qr", image_android, Default::default()).id());
 
-    let code_ios = QrCode::new(IOS_DOWNLOAD_URL.as_bytes()).unwrap();
-    let image_ios = egui::ColorImage {
-        size: [code_ios.width(), code_ios.width()],
-        pixels: code_ios
-            .to_colors()
-            .into_iter()
-            .map(|c| if c == QrColor::Dark { egui::Color32::BLACK } else { egui::Color32::WHITE })
-            .collect(),
-    };
-    textures.ios_qr = Some(ctx.load_texture("ios_qr", image_ios, Default::default()).id());
+    textures.android_qr = Some(create_qr(ANDROID_DOWNLOAD_URL, "android_qr"));
+    textures.ios_qr = Some(create_qr(IOS_DOWNLOAD_URL, "ios_qr"));
 
     textures
 }
@@ -62,8 +55,8 @@ pub fn show_share_screen(ui: &mut egui::Ui, state: &mut GameState, qr_textures: 
                 ui.label(egui::RichText::new("Android").size(18.0).strong());
                 ui.add_space(10.0);
                 
-                if let Some(texture_id) = qr_textures.android_qr {
-                    ui.add(egui::Image::new(egui::load::SizedTexture::new(texture_id, [160.0, 160.0])));
+                if let Some(handle) = &qr_textures.android_qr {
+                    ui.image((handle.id(), egui::vec2(160.0, 160.0)));
                 }
                 
                 ui.add_space(12.0);
@@ -83,8 +76,8 @@ pub fn show_share_screen(ui: &mut egui::Ui, state: &mut GameState, qr_textures: 
                 ui.label(egui::RichText::new("iOS").size(18.0).strong());
                 ui.add_space(10.0);
                 
-                if let Some(texture_id) = qr_textures.ios_qr {
-                    ui.add(egui::Image::new(egui::load::SizedTexture::new(texture_id, [160.0, 160.0])));
+                if let Some(handle) = &qr_textures.ios_qr {
+                    ui.image((handle.id(), egui::vec2(160.0, 160.0)));
                 }
                 
                 ui.add_space(12.0);
