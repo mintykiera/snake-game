@@ -171,9 +171,15 @@ fn draw_game_canvas(ui: &mut egui::Ui, game: &Game, profile: &UserProfile) {
         egui::Sense::hover(),
     );
     let rect = response.rect;
-    
+
+    painter.rect_stroke(
+        rect.expand(1.0),
+        0.0,
+        egui::Stroke::new(2.0, egui::Color32::from_gray(180)),
+    );
+
     painter.rect_filled(
-        rect,
+        rect.shrink(1.0), 
         0.0, 
         egui::Color32::from_rgb(
             profile.background_color[0],
@@ -181,7 +187,7 @@ fn draw_game_canvas(ui: &mut egui::Ui, game: &Game, profile: &UserProfile) {
             profile.background_color[2],
         ),
     );
-    
+
     for i in 0..GRID_SIZE {
         for j in 0..GRID_SIZE {
             let x = rect.min.x + i as f32 * CELL_SIZE;
@@ -196,12 +202,6 @@ fn draw_game_canvas(ui: &mut egui::Ui, game: &Game, profile: &UserProfile) {
             );
         }
     }
-
-    painter.rect_stroke(
-        rect.expand(1.0), 
-        0.0,
-        egui::Stroke::new(2.0, egui::Color32::from_gray(180)),
-    );
 
     for (i, &(x, y)) in game.snake.iter().enumerate() {
         let px = rect.min.x + x as f32 * CELL_SIZE;
