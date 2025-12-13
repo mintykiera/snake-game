@@ -137,7 +137,7 @@ impl eframe::App for SnakeApp {
             let should_submit = game_logic::update_game(dt, &mut self.game, &mut self.profile);
 
             if should_submit {
-                let _ = self.tx.send(AsyncCommand::SubmitScore(self.game.score, self.profile.clone()));
+                let _ = self.tx.send(AsyncCommand::SubmitScore(self.profile.high_score, self.profile.clone()));
                 ctx.request_repaint();
                 force_save = true;
             }

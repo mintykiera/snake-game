@@ -182,7 +182,6 @@ fn draw_game_canvas(ui: &mut egui::Ui, game: &Game, profile: &UserProfile) {
         ),
     );
     
-    // Brighter outline for better visibility
     painter.rect_stroke(
         rect,
         0.0,
