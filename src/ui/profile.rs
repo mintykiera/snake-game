@@ -4,6 +4,7 @@ use crate::constants::*;
 use crate::ui::components;
 
 const TOP_SAFE_AREA: f32 = 24.0;
+const BOTTOM_SAFE_AREA: f32 = 24.0;
 
 #[cfg(target_os = "android")]
 pub fn show_profile_screen(
@@ -52,7 +53,7 @@ fn draw_shared_profile_ui(
     ui: &mut egui::Ui,
     state: &mut GameState,
     profile: &mut UserProfile,
-    mobile_keyboard_trigger: Option<&mut bool>,
+    mut mobile_keyboard_trigger: Option<&mut bool>,
 ) -> bool {
     let mut changed = false;
 
@@ -60,7 +61,7 @@ fn draw_shared_profile_ui(
         if ui.add_sized([70.0, 35.0], egui::Button::new(egui::RichText::new("Back").size(12.5))).clicked() {
             state.current_screen = Screen::MainMenu;
             if let Some(trigger) = mobile_keyboard_trigger.as_deref_mut() {
-                **trigger = false; 
+                *trigger = false; 
             }
         }
     });
